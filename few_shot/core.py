@@ -89,7 +89,7 @@ class NShotTaskSampler(Sampler):
                         for i, q in query.iterrows():
                             batch.append(q['id'])
                 else:
-                    set_val = self.dataset.df.sample(k*n+q*n)
+                    set_val = self.dataset.df.sample(self.k*self.n+self.q*self.n)
                     for i, q in set_val.iterrows():
                         batch.append(q['id'])
 
