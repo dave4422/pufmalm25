@@ -58,7 +58,8 @@ class NShotTaskSampler(Sampler):
             batch = []
 
             for task in range(self.num_tasks):
-                if self.fixed_tasks is None:
+                if self.dataset is 'background':
+                    #if self.fixed_tasks is None:
                     # Get random classes
                     episode_boards = np.random.choice(self.dataset.df['board_id'].unique(), size=self.k, replace=False)
                 #else:
@@ -66,26 +67,30 @@ class NShotTaskSampler(Sampler):
                 #    episode_classes = self.fixed_tasks[self.i_task % len(self.fixed_tasks)]
                 #    self.i_task += 1
                 #print(episode_boards)
-                df = self.dataset.df[self.dataset.df['board_id'].isin(episode_boards)]
+                    df = self.dataset.df[self.dataset.df['board_id'].isin(episode_boards)]
                 #print('ahaha')
                 #print(task)
                 #print(episode_boards)
                 #print('\n\n')
 
-                support_k = {k: None for k in episode_boards}
-                for k in episode_boards:
+                    support_k = {k: None for k in episode_boards}
+                    for k in episode_boards:
                     # Select support examples
-                    support = df[df['board_id'] == k].sample(self.n)
-                    support_k[k] = support
+                        support = df[df['board_id'] == k].sample(self.n)
+                        support_k[k] = support
 
                     #print(support)
 
-                    for i, s in support.iterrows():
-                        batch.append(s['id'])
+                        for i, s in support.iterrows():
+                            batch.append(s['id'])
 
-                for k in episode_boards:
-                    query = df[(df['board_id'] == k) & (~df['id'].isin(support_k[k]['id']))].sample(self.q)
-                    for i, q in query.iterrows():
+                    for k in episode_boards:
+                        query = df[(df['board_id'] == k) & (~df['id'].isin(support_k[k]['id']))].sample(self.q)
+                        for i, q in query.iterrows():
+                            batch.append(q['id'])
+                else:
+                    set_val = self.dataset.df.sample(k*n+q*n)
+                    for i, q in set_val.iterrows():
                         batch.append(q['id'])
 
             #print((batch.dtype))
