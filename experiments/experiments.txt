@@ -54,3 +54,6 @@ python -m experiments.maml --dataset miniImageNet --order 2 --n 1 --k 5 --q 5 --
     --inner-train-steps 5 --inner-val-steps 10 --inner-lr 0.01 --eval-batches 80 --epoch-len 400
 python -m experiments.maml --dataset miniImageNet --order 2 --n 5 --k 5 --q 5 --meta-batch-size 2 \
     --inner-train-steps 5 --inner-val-steps 10 --inner-lr 0.01 --eval-batches 80 --epoch-len 800
+
+
+python -m experiments.maml2 --dataset roPUF --order 2 --n 50 --k 1 --q 5 --meta-batch-size 50     --inner-train-steps 5 --inner-val-steps 10 --inner-lr 0.01 --eval-batches 5 --epoch-len 10     --test-board D070437 --challenge-size 64 --load-indexed True

@@ -42,7 +42,8 @@ class NShotTaskSampler(Sampler):
 
         self.num_tasks = num_tasks
         # TODO: Raise errors if initialise badly
-        self.k = k
+        ### k is unused!
+        #self.k = k
         self.n = n
         self.q = q
         self.fixed_tasks = fixed_tasks
@@ -53,14 +54,25 @@ class NShotTaskSampler(Sampler):
         return self.episodes_per_epoch
 
     def __iter__(self):
+        ### How many batches per epoch?
         for _ in range(self.episodes_per_epoch):
             #print(self.episodes_per_epoch)
-            batch = []
 
-            for task in range(self.num_tasks):
-                if self.dataset is 'background':
+            ###a batch consists of num_tasks nshot tasks
+            batch = []
+            #print(self.n)
+            #print(self.k)
+            #print(self.q)
+
+            ### selct boards for tasks in this meta batch
+            if self.dataset.subset is 'background':
+                task_boards = np.random.choice(self.dataset.df['board_id'].unique(), size=self.num_tasks, replace=False)
+
+                for board_id in task_boards:
+
                     #if self.fixed_tasks is None:
                     # Get random classes
+                    '''
                     episode_boards = np.random.choice(self.dataset.df['board_id'].unique(), size=self.k, replace=False)
                 #else:
                     # Loop through classes in fixed_tasks
@@ -68,12 +80,13 @@ class NShotTaskSampler(Sampler):
                 #    self.i_task += 1
                 #print(episode_boards)
                     df = self.dataset.df[self.dataset.df['board_id'].isin(episode_boards)]
-                #print('ahaha')
+
                 #print(task)
                 #print(episode_boards)
-                #print('\n\n')
+
 
                     support_k = {k: None for k in episode_boards}
+                    #print(len(support_k))
                     for k in episode_boards:
                     # Select support examples
                         support = df[df['board_id'] == k].sample(self.n)
@@ -88,13 +101,50 @@ class NShotTaskSampler(Sampler):
                         query = df[(df['board_id'] == k) & (~df['id'].isin(support_k[k]['id']))].sample(self.q)
                         for i, q in query.iterrows():
                             batch.append(q['id'])
-                else:
-                    set_val = self.dataset.df.sample(self.k*self.n+self.q*self.n)
-                    for i, q in set_val.iterrows():
+                    '''
+
+
+                    ### get all smaples from current board
+
+                    #samples of board with id board_id
+                    df = self.dataset.df[self.dataset.df['board_id']==board_id]
+
+                    assert self.n+self.q <= df.shape[0]
+
+                    support = df.sample(self.n+self.q)
+                    #print(support)
+                    query = support.sample(self.q)
+                    #print(query.index)
+                    support = support.drop(query.index)
+
+                    assert support.shape[0] == self.n and query.shape[0] == self.q
+
+                    for _, s in support.iterrows():
+                        batch.append(s['id'])
+                    for _, q in query.iterrows():
                         batch.append(q['id'])
+
+            else:
+                df = self.dataset.df # there is just one board in the eval dataset
+
+                #print(df.shape)
+                assert self.n+self.q <= df.shape[0]
+
+                support = df.sample(self.n+self.q)
+                query = support.sample(self.q)
+                support = support.drop(query.index)
+
+                assert support.shape[0] == self.n and query.shape[0] == self.q
+
+                for _, s in support.iterrows():
+                    batch.append(s['id'])
+                for _, q in query.iterrows():
+                    batch.append(q['id'])
 
             #print((batch.dtype))
             #print((np.stack(batch).dtype))
+            #print(self.dataset.subset)
+            #print(np.stack(batch))
             yield np.stack(batch)
 
 
@@ -162,13 +212,13 @@ class EvaluateFewShot(Callback):
             seen += y_pred.shape[0]
 
             totals['loss'] += loss.item() * y_pred.shape[0]
-            totals[self.metric_name] += categorical_accuracy(y, y_pred) * y_pred.shape[0]
+            totals[self.metric_name] += categorical_accuracy(y[:,-5:,:], y_pred)# * y_pred.shape[0]
 
         logs[self.prefix + 'loss'] = totals['loss'] / seen
         logs[self.metric_name] = totals[self.metric_name] / seen
 
 
-def prepare_nshot_task(n: int, k: int, q: int) -> Callable:
+def prepare_nshot_taska(n: int, k: int, q: int) -> Callable:
     """Typical n-shot task preprocessing.
 
     # Arguments

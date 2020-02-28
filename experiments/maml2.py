@@ -87,7 +87,7 @@ evaluation = dataset_class('evaluation',challenge_size,test_board,load_indexed)
 evaluation_taskloader = DataLoader(
     evaluation,
     batch_sampler=NShotTaskSampler(evaluation, args.eval_batches, n=args.n, k=args.k, q=args.q,
-                                   num_tasks=args.meta_batch_size),
+                                   num_tasks=1),
     num_workers=8
 )
 
@@ -105,17 +105,20 @@ loss_fn =  nn.BCELoss().to(device)#nn.CrossEntropyLoss().to(device)
 def prepare_meta_batch(n, k, q, meta_batch_size):
     def prepare_meta_batch_(batch):
         x, y = batch
+
+        #print(batch.dim)
+        #print(x.shape)
         # Reshape to `meta_batch_size` number of tasks. Each task contains
         # n*k support samples to train the fast model on and q*k query samples to
         # evaluate the fast model on and generate meta-gradients
         #print(x.shape)
         #TODO is this correct?
-        x = x.reshape(meta_batch_size, n*k + q*k, x.shape[-1])
+        x = x.reshape(meta_batch_size, n + q, x.shape[-1])
         # Move to device
         x = x.double().to(device)
 
         #print(x)
-        y = y.reshape(meta_batch_size, n*k + q*k, 1)
+        y = y.reshape(meta_batch_size, n + q, 1)
         y = y.double().to(device)
         #print(x.shape)
         #print(y.reshape(meta_batch_size, n*k + q*k, 1).shape)
@@ -126,6 +129,9 @@ def prepare_meta_batch(n, k, q, meta_batch_size):
     return prepare_meta_batch_
 
 
+
+
+
 callbacks = [
     EvaluateFewShot(
         eval_fn=meta_gradient_step,
@@ -134,7 +140,7 @@ callbacks = [
         k_way=args.k,
         q_queries=args.q,
         taskloader=evaluation_taskloader,
-        prepare_batch=prepare_meta_batch(args.n, args.k, args.q, args.meta_batch_size),
+        prepare_batch=prepare_meta_batch(args.n, args.k, args.q, 1), #changed meta_batch_size to 1 bc of line83 vs l 90
         # MAML kwargs
         inner_train_steps=args.inner_val_steps,
         inner_lr=args.inner_lr,

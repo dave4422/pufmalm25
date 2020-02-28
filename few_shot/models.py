@@ -265,7 +265,7 @@ class FewShotClassifierPUF(nn.Module):
         """
         super(FewShotClassifierPUF, self).__init__()
         self.layer1 = nn.Sequential(
-            nn.Linear(64, in_features),
+            nn.Linear(in_features, in_features),
             #nn.BatchNorm1d(in_features),
             nn.ReLU()
             )

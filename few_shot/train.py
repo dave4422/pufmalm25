@@ -111,13 +111,12 @@ def fit(model: Module, optimiser: Optimizer, loss_fn: Callable, epochs: int, dat
             x, y = prepare_batch(batch)
 
             loss, y_pred = fit_function(model, optimiser, loss_fn, x, y, **fit_function_kwargs)
+
+            #print(.shape)
             batch_logs['loss'] = loss.item()
 
-            print(y)
-            print(y_pred)
-
             # Loops through all metrics
-            batch_logs = batch_metrics(model, y_pred, y, metrics, batch_logs)
+            batch_logs = batch_metrics(model, y_pred, y[:,-5:,:], metrics, batch_logs)
 
             callbacks.on_batch_end(batch_index, batch_logs)
 

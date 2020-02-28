@@ -6,6 +6,16 @@ from typing import Dict, List, Callable, Union
 
 from few_shot.core import create_nshot_task_label
 
+import math
+import numpy as np
+
+def round_updown(val):
+    if (float(val) % 1) >= 0.5:
+        x = math.ceil(val)
+    else:
+        x = round(val)
+    return x
+
 
 def replace_grad(parameter_gradients, parameter_name):
     def replace_grad_(module):
@@ -54,63 +64,66 @@ def meta_gradient_step(model: Module,
     task_gradients = []
     task_losses = []
     task_predictions = []
-    #print('h33ere')
-    #print(x)
-    #print(y)
     for meta_batch_x, meta_batch_y in zip(x,y):
         # By construction x is a 5D tensor of shape: (meta_batch_size, n*k + q*k, channels, width, height)
         # Hence when we iterate over the first  dimension we are iterating through the meta batches
-        x_task_train = meta_batch_x[:n_shot * k_way]
-        x_task_val = meta_batch_x[n_shot * k_way:]
+        x_task_train = meta_batch_x[:n_shot]
+        x_task_val = meta_batch_x[n_shot:]
 
-        #print(x_task_val)
-
-        #TODO do y match x??
-        y_task_train= meta_batch_y[:n_shot * k_way]
-        y_task_val =meta_batch_y[n_shot * k_way:]
-
-        #print(y)
+        y_task_train= meta_batch_y[:n_shot]
+        y_task_val =meta_batch_y[n_shot:]
 
         # Create a fast model using the current meta model weights
         fast_weights = OrderedDict(model.named_parameters())
 
         # Train the model for `inner_train_steps` iterations
         for inner_batch in range(inner_train_steps):
-            for x_val, y_val in zip(x_task_train,y_task_train):
             # Perform update of model weights
             #y = create_nshot_task_label(k_way, n_shot).to(device)
-                logits = model.functional_forward(x_val, fast_weights)
+            logits = model.functional_forward(x_task_train, fast_weights)
+
+            assert logits.shape == y_task_train.shape
+
+            #print('train')
             #print(logits)
-            #loss = loss_fn(logits, y)
-                #print(logits)
-                loss = loss_fn(logits,y_val)
-                gradients = torch.autograd.grad(loss, fast_weights.values(), create_graph=create_graph)
+            #print(y_task_train)
+
+            loss = loss_fn(logits, y_task_train)
+            gradients = torch.autograd.grad(loss, fast_weights.values(), create_graph=create_graph)
 
             # Update weights manually
-                fast_weights = OrderedDict(
-                    (name, param - inner_lr * grad)
-                    for ((name, param), grad) in zip(fast_weights.items(), gradients)
-                )
+            fast_weights = OrderedDict(
+                (name, param - inner_lr * grad)
+                for ((name, param), grad) in zip(fast_weights.items(), gradients)
+            )
 
         # Do a pass of the model on the validation data from the current task
         #y = create_nshot_task_label(k_way, q_queries).to(device)
-        for x_val, y_val in zip(x_task_val,y_task_val):
-            logits = model.functional_forward(x_val, fast_weights)
-        #loss = loss_fn(logits, y)
-            loss = loss_fn(logits, y_val)
-            loss.backward(retain_graph=True)
+        logits = model.functional_forward(x_task_val, fast_weights)
+        loss = loss_fn(logits, y_task_val)
+        loss.backward(retain_graph=True)
 
+        #print('val')
+        #print(logits)
+        #print(y_task_val)
+
+        #function_to_map = lambda x: round_updown(x)  # Where `f` instantiates myCustomOp.
+        y_pred = logits#tf.map_fn(function_to_map, logits)
+        #print(logits)
+        y_pred = (np.array([round_updown(xi) for xi in y_pred.cpu().detach().numpy().reshape(logits.shape[0])],dtype='long'))
         # Get post-update accuracies
-            y_pred = logits.softmax(dim=0)
-            task_predictions.append(y_pred)
+        #y_pred = logits.softmax(dim=0)
+        task_predictions.append( torch.from_numpy(y_pred).to(device))
 
         # Accumulate losses and gradients
-            task_losses.append(loss)
-            gradients = torch.autograd.grad(loss, fast_weights.values(), create_graph=create_graph)
-            named_grads = {name: g for ((name, _), g) in zip(fast_weights.items(), gradients)}
-            task_gradients.append(named_grads)
+        task_losses.append(loss)
+        gradients = torch.autograd.grad(loss, fast_weights.values(), create_graph=create_graph)
+        named_grads = {name: g for ((name, _), g) in zip(fast_weights.items(), gradients)}
+        task_gradients.append(named_grads)
 
     if order == 1:
+        pass
+
         if train:
             sum_task_gradients = {k: torch.stack([grad[k] for grad in task_gradients]).mean(dim=0)
                                   for k in task_gradients[0].keys()}
