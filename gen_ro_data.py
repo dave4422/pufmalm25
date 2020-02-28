@@ -8,22 +8,38 @@ import shutil
 
 random.seed( 1 )
 number_of_test_boards = 10
+number_of_untouched_test_boards = 3* number_of_test_boards
+
+
 
 # directory of frequency data
 directory = os.fsencode('data/roPUF/')
-k_shot_board_names = random.sample(os.listdir(directory),k=number_of_test_boards)
+k_shot_board_names = random.sample(os.listdir(directory),k=number_of_test_boards+number_of_untouched_test_boards)
+
+test_boards = k_shot_board_names[:number_of_test_boards]
+untouched_test_boards = k_shot_board_names[number_of_test_boards:]
 
 diraname = os.path.dirname(__file__)
 
 number_challenges_per_ro = 100
 
+#del everythin in experiments direct
+shutil.rmtree(directory.decode("utf-8")+'experiments')
+
 
 #dataset = tf.data.Dataset()
 
 for challenge_size in [64,128]:
-    for index in range(1,len(k_shot_board_names)+1):
-        print("progress: "+str(index+((challenge_size//64-1)*10))+"/"+str(len([64,128])*len(k_shot_board_names)))
-        dir_name = "experiments/"+(k_shot_board_names[index-1].decode("utf-8")).strip(".csv")+"_"+str(challenge_size)
+    for index in range(1,len(test_boards)+1):
+
+        dont_touch = untouched_test_boards[(index-1)*(number_of_untouched_test_boards//number_of_test_boards):(index-1)*(number_of_untouched_test_boards//number_of_test_boards)+(number_of_untouched_test_boards//number_of_test_boards)]
+        #print(dont_touch)
+
+        dont_touch = [item.decode('UTF-8') for item in dont_touch]
+        print('Dont touch test set:')
+        print(dont_touch)
+        print("progress: "+str(index+((challenge_size//64-1)*10))+"/"+str(len([64,128])*len(test_boards)))
+        dir_name = "experiments/"+(test_boards[index-1].decode("utf-8")).strip(".csv")+"_"+str(challenge_size)
 
         if os.path.exists(directory.decode("utf-8")+dir_name):
             shutil.rmtree(directory.decode("utf-8")+dir_name)
@@ -34,6 +50,7 @@ for challenge_size in [64,128]:
 
         training = None
         test = None
+        test_untouched = None
         # iterate over all boards
         for file in os.listdir(directory):
             filename = os.fsdecode(os.path.join(directory, file))
@@ -71,14 +88,21 @@ for challenge_size in [64,128]:
 
                 #print(lables_and_challenges.shape)
                 #print(lables_and_challenges)
-
-                if filename.endswith(k_shot_board_names[index-1].decode("utf-8")):
+                #print()
+                if filename.endswith(test_boards[index-1].decode("utf-8")):
                     #print(classes)
                     test = lables_and_challenges
                     #print("LABLES:")
                     #print(lables)
                     #print("\n\n")
                     #print(challenges)
+                elif filename[len('data/roPUF/'):] in dont_touch:
+                    #print(filename)
+                    if test_untouched is None:
+                        test_untouched = lables_and_challenges
+                    else:
+
+                        test_untouched = np.row_stack([test_untouched, lables_and_challenges])
                 else:
                     if training is None:
                         training = lables_and_challenges
@@ -92,3 +116,4 @@ for challenge_size in [64,128]:
 
         pd.DataFrame(training).to_csv(os.path.join(diraname, directory.decode("utf-8")+dir_name)+"/training.csv",header=False, index = False)
         pd.DataFrame(test).to_csv(os.path.join(diraname, directory.decode("utf-8")+dir_name)+"/test.csv",header=False, index = False)
+        pd.DataFrame(test_untouched).to_csv(os.path.join(diraname, directory.decode("utf-8")+dir_name)+"/test_untouched.csv",header=False, index = False)
