@@ -183,7 +183,7 @@ class RoPUF(Dataset):
         # Arguments:
             subset: Whether the dataset represents the background or evaluation set
         """
-        if subset not in ('background', 'evaluation'):
+        if subset not in ('background', 'evaluation', 'test_untouched'):
             raise(ValueError, 'subset must be one of (background, evaluation)')
         self.subset = subset
         self.test_board = test_board
@@ -246,6 +246,8 @@ class RoPUF(Dataset):
 
         if subset == 'background':
             path_to_data = os.path.join(DATA_PATH, 'roPUF/experiments/'+test_board+"_"+str(challenge_size)+"/training.csv")
+        elif subset == 'test_untouched':
+            path_to_data = os.path.join(DATA_PATH, 'roPUF/experiments/'+test_board+"_"+str(challenge_size)+"/test_untouched.csv")
         else:
             path_to_data = os.path.join(DATA_PATH, 'roPUF/experiments/'+test_board+"_"+str(challenge_size)+"/test.csv")
 

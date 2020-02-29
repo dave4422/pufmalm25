@@ -116,7 +116,7 @@ def fit(model: Module, optimiser: Optimizer, loss_fn: Callable, epochs: int, dat
             batch_logs['loss'] = loss.item()
 
             # Loops through all metrics
-            batch_logs = batch_metrics(model, y_pred, y[:,-5:,:], metrics, batch_logs)
+            batch_logs = batch_metrics(model, y_pred, y[:,-1:,:], metrics, batch_logs)
 
             callbacks.on_batch_end(batch_index, batch_logs)
 
