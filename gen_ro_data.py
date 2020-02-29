@@ -16,6 +16,11 @@ number_of_untouched_test_boards = 3* number_of_test_boards
 directory = os.fsencode('data/roPUF/')
 k_shot_board_names = random.sample(os.listdir(directory),k=number_of_test_boards+number_of_untouched_test_boards)
 
+
+#make experiemnt dir if not exists
+if not os.path.exists("data/roPUF/experiments"):
+    Path("data/roPUF/experiments").mkdir(parents=True, exist_ok=True)
+    
 test_boards = k_shot_board_names[:number_of_test_boards]
 untouched_test_boards = k_shot_board_names[number_of_test_boards:]
 
