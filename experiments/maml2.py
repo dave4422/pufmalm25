@@ -13,6 +13,7 @@ from few_shot.train import fit
 from few_shot.callbacks import *
 from few_shot.utils import setup_dirs
 from config import PATH
+from few_shot.metrics import categorical_accuracy
 
 
 setup_dirs()
@@ -91,6 +92,14 @@ evaluation_taskloader = DataLoader(
     num_workers=8
 )
 
+test_untouched = dataset_class('test_untouched',challenge_size,test_board,load_indexed)
+test_taskloader = DataLoader(
+    test_untouched,
+    batch_sampler=NShotTaskSampler(evaluation, 800, n=args.n, k=args.k, q=args.q,
+                                   num_tasks=1),
+    num_workers=8
+)
+
 
 ############
 # Training #
@@ -156,6 +165,7 @@ callbacks = [
 ]
 
 
+
 fit(
     meta_model,
     meta_optimiser,
@@ -171,3 +181,33 @@ fit(
                          'order': args.order, 'device': device, 'inner_train_steps': args.inner_train_steps,
                          'inner_lr': args.inner_lr},
 )
+
+seen = 0
+totals = {'loss': 0, 'ca': 0}
+print(test_taskloader.dataset.subset)
+for batch_index, batch in enumerate(test_taskloader):
+    x, y = (prepare_meta_batch(args.n, args.k, args.q, 1))(batch)
+
+    loss, y_pred = meta_gradient_step(
+        meta_model,
+        meta_optimiser,
+        loss_fn,
+        x,
+        y,
+        n_shot=args.n,
+        k_way=args.k,
+        q_queries=args.q,
+        train=False,
+        inner_train_steps=args.inner_val_steps,
+        inner_lr=args.inner_lr,
+        device=device,
+        order=args.order,
+    )
+
+    seen += y_pred.shape[0]
+
+    totals['loss'] += loss.item() * y_pred.shape[0]
+    totals['ca'] += categorical_accuracy(y[:,-1:,:], y_pred)# * y_pred.shape[0]
+
+print(totals['loss'] / seen)
+print(totals['ca'] / seen)
