@@ -216,6 +216,7 @@ class EvaluateFewShot(Callback):
 
         logs[self.prefix + 'loss'] = totals['loss'] / seen
         logs[self.metric_name] = totals[self.metric_name] / seen
+        print(totals[self.metric_name] / seen)
 
 
 def prepare_nshot_taska(n: int, k: int, q: int) -> Callable:
