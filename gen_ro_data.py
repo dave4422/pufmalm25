@@ -6,16 +6,28 @@ import os
 import csv
 from pathlib import Path
 import shutil
+import argparse
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--test-boards', default=1, type=int)
+
+#parser.add_argument('--boards-per-task', default=25, type=int)
+
+
+
+args = parser.parse_args()
 
 random.seed( 1 )
-number_of_test_boards = 10
+number_of_test_boards = args.test_boards
 number_of_untouched_test_boards = 3* number_of_test_boards
 
 
 
 # directory of frequency data
 directory = os.fsencode('data/roPUF/')
-k_shot_board_names = random.sample(os.listdir(directory),k=number_of_test_boards+number_of_untouched_test_boards)
+k_shot_board_names = random.sample((os.listdir(directory)),k=number_of_test_boards+number_of_untouched_test_boards)
+print(k_shot_board_names)
 
 
 #make experiemnt dir if not exists
@@ -44,7 +56,7 @@ for challenge_size in [64,128]:
         dont_touch = [item.decode('UTF-8') for item in dont_touch]
         print('Dont touch test set:')
         print(dont_touch)
-        print("progress: "+str(index+((challenge_size//64-1)*10))+"/"+str(len([64,128])*len(test_boards)))
+        print("progress: "+str(challenge_size)+" "+str(index+((challenge_size//64-1)*number_of_test_boards))+"/"+str(len([64,128])*len(test_boards)))
         dir_name = "experiments/"+(test_boards[index-1].decode("utf-8")).strip(".csv")+"_"+str(challenge_size)
 
         if os.path.exists(directory.decode("utf-8")+dir_name):
