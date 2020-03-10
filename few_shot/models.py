@@ -275,7 +275,17 @@ class FewShotClassifierPUF(nn.Module):
             nn.ReLU()
             )
         self.layer3 = nn.Sequential(
-            nn.Linear(in_features, in_features),
+            nn.Linear(in_features, 1600),
+            torch.nn.Dropout(0.2),
+            nn.ReLU()
+            )
+        self.layer4 = nn.Sequential(
+            nn.Linear(1600, 800),
+            torch.nn.Dropout(0.3),
+            nn.ReLU()
+            )
+        self.layer5 = nn.Sequential(
+            nn.Linear(800, in_features),
             torch.nn.Dropout(0.2),
             nn.ReLU()
             )
@@ -291,6 +301,8 @@ class FewShotClassifierPUF(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
+        x = self.layer4(x)
+        x = self.layer5(x)
         #x = self.conv4(x)
 
         #x = x.view(x.size(0), -1)
@@ -309,6 +321,12 @@ class FewShotClassifierPUF(nn.Module):
         x = F.dropout(x, p=0.2, training=True)
         x = F.relu(x)
         x = F.linear(x,weights[f'layer3.0.weight'],weights[f'layer3.0.bias'])
+        x = F.dropout(x, p=0.2, training=True)
+        x = F.relu(x)
+        x = F.linear(x,weights[f'layer4.0.weight'],weights[f'layer4.0.bias'])
+        x = F.dropout(x, p=0.3, training=True)
+        x = F.relu(x)
+        x = F.linear(x,weights[f'layer5.0.weight'],weights[f'layer5.0.bias'])
         x = F.dropout(x, p=0.2, training=True)
         x = F.relu(x)
 
