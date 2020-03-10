@@ -275,17 +275,17 @@ class FewShotClassifierPUF(nn.Module):
             nn.ReLU()
             )
         self.layer3 = nn.Sequential(
-            nn.Linear(in_features, 640),
+            nn.Linear(in_features, 320),
             torch.nn.Dropout(0.2),
             nn.ReLU()
             )
         self.layer4 = nn.Sequential(
-            nn.Linear(640, 320),
+            nn.Linear(320, 160),
             torch.nn.Dropout(0.3),
             nn.ReLU()
             )
         self.layer5 = nn.Sequential(
-            nn.Linear(320, in_features),
+            nn.Linear(160, in_features),
             torch.nn.Dropout(0.2),
             nn.ReLU()
             )
